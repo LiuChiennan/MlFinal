@@ -4,8 +4,9 @@
 #include <cstdlib>		// for std::system
 #include <utility>		// for std::pair
 #include <string>		// for std::basic_string<uint8_t>
-#include <fstream>		// for std::basic_fstream<uint8_t>
+#include <fstream>		// for std::fstream
 #include <Eigen/Dense>	// for Eigen::MatrixXd, Eigen::Map, Eigen::SelfAdjointEigenSolver
+//#include <Eigen/Sparse>
 
 constexpr uint32_t figures = 60000;
 constexpr uint32_t figure_size = 45;
@@ -15,13 +16,13 @@ constexpr uint32_t single_size = figure_size * figure_size;
 using RawPixel = uint8_t;
 using RawFigure = std::basic_string<RawPixel>;
 using Pixel = double;	// 原 uint8_t 会发生下限溢出，需要扩展到负数，并且鉴于精度的考虑，使用 double
-// 如果使用 Eigen::Matrix<Pixel, -1, single_size, RowMajor>  导致静态内存分配太大，报错
-// 必须使用 RowMajor，因为在函数 castToDataSet 中直接对内存块进行了复制操作
-using FigureSet = Eigen::Matrix<Pixel, -1, -1, Eigen::RowMajor>;
+						// 如果使用 Eigen::Matrix<Pixel, -1, single_size, RowMajor>  导致静态内存分配太大，报错
+						// 必须使用 RowMajor，因为在函数 castToDataSet 中直接对内存块进行了复制操作
+using FigureSet = Eigen::Matrix<Pixel, -1, -1>;
 
 RawFigure readData(std::size_t number)
 {
-	std::basic_fstream<RawPixel> fin("mnist_train_data", std::ios::in | std::ios::binary);
+	std::fstream fin("mnist_train_data", std::ios::in | std::ios::binary);
 	// 不加此行读不了 0x0D，因为 0x0D 是换行符，会被当做空白字符省略掉。
 	// 奇怪明明加了 std::ios::binary 还是这样。
 	fin.unsetf(std::ios::skipws);
@@ -59,7 +60,7 @@ void printRawFigure(const RawFigure & data)
 inline FigureSet castToDataSet(const RawFigure & raw_set)
 {
 	// 将读取的数据输入到 Eigen 的矩阵，并将各个像素转成 double 以提高精度。
-	return Eigen::Map<Eigen::Matrix<RawPixel, -1, -1, Eigen::RowMajor>>(const_cast<RawPixel *>(raw_set.data()), raw_set.size() / single_size, single_size).cast<double>();
+	return Eigen::Map<Eigen::Matrix<RawPixel, -1, -1, Eigen::RowMajor>>(const_cast<RawPixel *>(raw_set.data()), raw_set.size() / single_size, single_size).cast<double>().adjoint();
 }
 
 // 对于很少使用的函数，可以使用模板函数，从而如果不调用该函数，就不会增加代码段大小。
@@ -71,7 +72,7 @@ void printFigure(const FigureSet & set)
 		for (int j = 0; j < figure_size; ++j)
 		{
 			std::cout.width(3);
-			std::cout << static_cast<int>(set(index, i * figure_size + j));
+			std::cout << static_cast<int>(set(i * figure_size + j, index));
 		}
 		std::cout << '\n';
 	}
@@ -80,14 +81,23 @@ void printFigure(const FigureSet & set)
 void featureNormalize(FigureSet & data)
 {
 	//样本均值化为0  
-	data.rowwise() -= data.colwise().mean();
+	data.colwise() -= data.rowwise().mean();
 }
 
 Eigen::MatrixXd computeCov(const FigureSet & data)
 {
-	// 计算协方差矩阵C = XTX / n-1; 
+	// 计算协方差矩阵C = X X^T / (n-1); 
 	// adjoint 求取共轭转置，transpose 求取实转置，此处只需要用实转置即可
-	return (data.transpose() * data).array() / (data.rows() - 1);
+	return (data * data.transpose()).array() / (data.cols() - 1);
+}
+
+decltype(auto) computeSvd(const FigureSet & data)
+{
+	// 计算奇异值分解
+	// X = U D V^T
+	// 所以要获取奇异值分解后的
+	Eigen::BDCSVD<FigureSet> svd(data, Eigen::DecompositionOptions::ComputeFullU);
+	return std::make_pair(svd.singularValues(), svd.matrixU());
 }
 
 // 计算特征值和特征向量。返回值设为 decltype(auto) 从而实现多重返回值
@@ -108,9 +118,14 @@ std::size_t computeDim(const Eigen::MatrixXd & eigen_values, double ratio = 0.95
 	{
 		sum += eigen_values(i, 0);
 		if (sum / total_sum >= ratio)
-			return eigen_values.rows() -  i;
+			return eigen_values.rows() - i;
 	}
 	throw std::runtime_error("you shouldn't get here!");
+}
+
+std::size_t computeDim2(const Eigen::MatrixXd & svd_values, double ratio = 0.95)
+{
+	return computeDim((svd_values.array() * svd_values.array()).reverse(), ratio);
 }
 
 int main()
@@ -123,15 +138,16 @@ int main()
 	printFigure<24>(figures);
 	std::cout << '\n';
 	// 归中心化
+	std::cout << "reach here" << std::endl;
 	featureNormalize(figures);
-	// 试打印归中心化后上述图片
-	printFigure<24>(figures);
-	std::cout << '\n';
-	auto cov_mat = computeCov(figures);
-	// 计算特征值和特征向量，此处使用 C++ 17 中的多返回值特性
-	auto[eigen_values, eigen_vectors] = computeEig(cov_mat);
+	//// 试打印归中心化后上述图片
+	//printFigure<24>(figures);
+	//std::cout << '\n';
+	auto[svd_values, svd_vectors] = computeSvd(figures);
 	// 计算合适的默认为 95% 损失的保留维度个数
-	auto n_dim = computeDim(eigen_values);
+	std::cout << "reach here" << std::endl;
+	std::cout << svd_values.bottomRows(100) << std::endl;
+	 auto n_dim = computeDim2(svd_values);
 #if 0
 	for (int i = 0; i < figure_size; ++i)
 	{
@@ -145,8 +161,8 @@ int main()
 #endif
 	// 查看实际留存的维度个数
 	std::cout << n_dim << std::endl;
-	Eigen::MatrixXd res = figures * eigen_vectors.rightCols(n_dim);
-	std::cout << "the result is " << res.rows() << "x" << res.cols() << " after pca algorithm." << std::endl;
+	//Eigen::MatrixXd res = figures * eigen_vectors.rightCols(n_dim);
+	//std::cout << "the result is " << res.rows() << "x" << res.cols() << " after pca algorithm." << std::endl;
 	std::system("pause");
 	return 0;
 }
