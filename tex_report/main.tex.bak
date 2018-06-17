@@ -1,0 +1,694 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Wenneker Article
+% LaTeX Template
+% Version 2.0 (28/2/17)
+%
+% This template was downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Vel (vel@LaTeXTemplates.com)
+% Frits Wenneker
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[10pt, a4paper, twocolumn]{article} % 10pt font size (11 and 12 also possible), A4 paper (letterpaper for US letter) and two column layout (remove for one column)
+
+\makeatletter
+\newif\if@restonecol
+\makeatother
+\let\algorithm\relax
+\let\endalgorithm\relax
+
+\usepackage{algorithm}
+
+\usepackage{algorithmic}
+
+\usepackage{bm}
+
+\usepackage{graphicx}
+
+\usepackage{subfigure}
+
+\usepackage{amsmath}
+
+%\usepackage[UTF8]{ctex}
+
+\usepackage{CJK}
+
+\usepackage{multirow}
+
+\input{structure.tex} % Specifies the document structure and loads requires packages
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE INFORMATION
+%----------------------------------------------------------------------------------------
+
+%\title{Effective Methods for Capturing Cattle Rustlers} % The article title
+
+\title{Machine Learning Final Reports\\\Large Researches on MNIST with Various Learning Techniques}
+
+
+\author{
+	\authorstyle{Liu Jiannan and  Zhao Yao} % Authors
+	\newline\newline % Space before institutions
+	\textsuperscript{1}\institution{Shanghai Jiaotong University CS420}\\ % Institution 1
+	\textsuperscript{2}\institution{\texttt{https://github.com/LiuChiennan/MlFinal}}\\ % Institution 2
+	%\textsuperscript{3}\institution{\texttt{LaTeXTemplates.com}} % Institution 3
+}
+
+% Example of a one line author/institution relationship
+%\author{\newauthor{John Marston} \newinstitution{Universidad Nacional Aut贸noma de M茅xico, Mexico City, Mexico}}
+
+\date{\today} % Add a date here if you would like one to appear underneath the title block, use \today for the current date, leave empty for no date
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Print the title
+
+\thispagestyle{firstpage} % Apply the page style for the first page (no headers and footers)
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\lettrineabstract{In this article, we carry out the whole process of the research on MNIST database, 
+including preprocessing, formatting, training, testing and evaluation of each model. Firstly, 
+we exert de-noise methods to avoid extra disturbance. Then, we center digits by the center of mass method. Next, 
+PCA is used for dimension reduction. These are preprocessing and formatting steps. In the next part, traditional learners, 
+namely SVM and knn, and modern methods, convolutional neural network (a.k.a \lq\lq CNN\rq\rq) are used on extracted training data, 
+so that we finally build three classification models. The final part conveys some of comparisons of the three learners above.}
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+
+As a part of $pattern recognization$, image recognization play an important role in artificial intelligence. To recognize a figure,
+we need lots of samples to learn the targets` features, and according  to what the model has learned to classify a figure and determine 
+what it is. In this report, we build some classifiers to classify the MNIST dataset, and explore how these classifiers work and their 
+disadvantages and disadvantages.
+
+%
+% ADD INTRODUCTION
+%
+
+\section{Preprocessing}
+The MNIST database is a dataset of handwritten digits, which has a training set of 60,000 
+examples and a test set of 10,000 examples. 
+It is a subset of a larger set available from NIST. 
+It is a good database for people who want to try learning techniques and pattern recognition 
+methods on real-world data while spending minimal efforts on preprocessing and formatting.
+
+\subsection{Fromatting}
+
+The dataset provided  contains only raw figure pictures, which means some of pictures are polluted by noise and some$\prime$s center is deviated from their mass center. So it is considerably necessary to adjust these raw figures.
+
+There are a number of previous researches on how to do de-noise on pictures, while the noise in the raw dataset is somehow more like spots (as shown in the figure 1) but not general random noise. That makes it hard to find papers on such a particular problem. In researching of this problem, we resorted to ``Attention Mechanism`` while found it needs GPGPUs or servers to accelerate. So eventually, we design a specific algorithm which we employ image segmentation algorithm in it.
+\begin{figure}
+	\includegraphics[width=\linewidth]{mnist_display.png} % Figure image
+	\caption{one hand writing figure} % Figure caption
+	\label{mnist_display} % Label for referencing with \ref{mnist_display}
+\end{figure}
+As the name goes, image segmentation algorithms can split a picture into several parts base on correlation in a certain area. Because grey-level figures our dataset contains, the very first method we try is Otsu Method (1979) (ref1), which is a threshold-based segmentation algorithm. The algorithm can be briefly summarized as below:
+
+\begin{algorithm}
+\caption{otsu method}
+\label{alg1}
+\begin{algorithmic}[1]
+\REQUIRE a grey-level figure which must have an obvious background color
+\ENSURE threshold: $\bm{t}$
+
+\STATE make a gray-level histogram, whose x-axis stands for each level of grey and y-axis stands for frequencies for each level
+
+\STATE Define $\bm{M}$ as the average level of the histogram. The part less than $\bm{t}$ is named $\bm{A}$ and the other part is named $\bm{B}$. Then $\bm{PA}$ is $\bm{A}$'s ratio of total and $\bm{PB}$ is $\bm{B}$'s ratio of total, and $\bm{MA}$ is the average of $\bm{A}$ and $\bm{MB}$ is the average of $\bm{B}$.
+
+\STATE traverse $\bm{t}$ from 0 to 255. For each $\bm{t}$, calculate $$\bm{ICV = PA\times(MA-M)^2 + PB\times(MB-M)^2}$$ Find a $\bm{t}$ maximize $\bm{ICV}$. Namely, $$\bm{argmax_t PA\times(MA-M)^2+PB\times(MB-M)^2}$$
+\end{algorithmic}
+\end{algorithm}
+
+After Otsu Method, we can get several foreground color areas and background color areas (in general situations there is only one background area) . Then we need to distinguish which foreground area is the valid number area but not a spot.
+At the very beginning, we try to calculate the area of each part. But it turns out to be a failure because in some pictures the valid area is even smaller than some spots. Then we try to calculate the sum of grey-level in each area, while it fails also because of a similar reason.
+We find the fact that most spots are much similar to a ball and much smaller than the valid area, which means we can calculate the variance of each foreground area and find one has the biggest variance. That is just the valid area.
+
+
+\begin{algorithm}
+\caption{locate valid area}
+\begin{algorithmic}[1]
+
+\REQUIRE split threshold given by otsu method, the grey-level figure
+\ENSURE a unique valid area
+\STATE find all foreground areas with threshold $\bm{t}$
+\STATE for each area, calculate the variance of both axes and then add up them, the valid area possesses the biggest variance sum
+\end{algorithmic}
+\end{algorithm}
+
+Here we gain the main area contains the body of sample number, yet it still has a deflected center in the picture. Two traditional ways to correct it are bounding-box method and mass center method. In order to have a statistically better accuracy, we adopt the second one. This paper($^{[2]}$) provides a way to accelerate the calculation.
+
+
+\begin{algorithm}
+\caption{mass center method}
+\begin{algorithmic}[1]
+\REQUIRE $\bm{45\times45}$ grey-level figure which was output from algorithm 2
+\ENSURE $\bm{28\times28}$ standard MNIST classification size
+\STATE calculate the $\bm{45\times45}$ figure\~s mass center, make G equals the center
+\STATE box an area around $\bm{G}$ with size $\bm{28\times28}$, then calculate the mass center of the sub-area, then update the $G$
+\IF{$\bm{G}$ changes}
+\STATE go to 2
+\ELSE
+\STATE return $\bm{G}$
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+
+In experiment, we find that some numbers` figures always have a deflected mass center itself for each, so the number seems to have a little different sizes of its four margins. For example, the number $``6``$ owns mass mostly in its bottom half part while the number ``7`` and ``9`` have mass mostly in their top half part. However, we finally ignore the fact because number ``6`` all have a deflected center, which will not influence the distribution of ``6``, so do ``7``s and ``9``s.
+
+\begin{figure}
+\begin{minipage}[t]{0.3\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig2_1.png}
+\end{minipage}
+\begin{minipage}[t]{0.3\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig2_2.png}
+\end{minipage}
+\begin{minipage}[t]{0.3\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig2_3.png}
+\end{minipage}
+\caption{modifications after processes above.
+from left to right, the raw figure, figure after de-noising and locating, figure after extracting.}
+\end{figure}
+All codes above are implemented in C++ and are saved in the tool(git) folder.
+
+%------------------------------------------------
+
+\subsection{decomposition: PCA}
+
+Principal component analysis (a.k.a {\bfseries PCA}) is a statistical procedure that uses an orthogonal transformation to convert a set of observations of possibly correlated variables into a set of values of linearly uncorrelated variables called principal components. If we take the first several principal components out sort by variance, we can achieve dimension reduction but lose as less information as possible.\\
+
+Extracted figures after centering are $28\times28$ scale, namely 784 dimensions. We note that many pixels of figures are always 0, especially the ones near the borders, which contributes to the necessity to execute {\bfseries PCA} on it to reduce low variance dimensions. We assume {\bfseries PCA} remains 95\% information and it turns out that the setting of 240 reduced dimensions is appropriate. Traditional ways to implement {\bfseries PCA} are eigenvector method and {\bfseries SVD} method and they are mathematically equivalent. We implement both, each`s details are as teacher`s lectures` description.\\
+
+{\bfseries PCA}`s codes are implemented in C++ and are saved in the {\bfseries \emph{pre\_treatment(git)}} folder.
+
+\section{Methods}
+
+\subsection{Support Vector Machine}
+In machine learning, {\bfseries \emph{support vector machine}}(a.k.a {\bfseries SVM}) is
+supervised learning models with associated learning algorithms that analyze data used for
+classification and regression analysis. Given a set of training examples, each marked as
+belonging to one or the other of two categories, an {\bfseries SVM} training algorithm builds
+a model that assigns new examples to one category or the other, making it a non-probabilistic binary linear classifier.
+In addition to performing linear classification,{\bfseries SVM} can efficiently perform a
+non-linear classification using what is called the kernel trick, implicitly mapping their inputs into high-dimensional feature spaces.\\
+The derivation of SVM is shown in lectures so we omit it here. The final form of SVM`s dual problem is as shown below:\\
+\begin{align}\label{svm}
+  &\min_{\alpha}\frac{1}{2}\vec \alpha^T\cdot QMatrix\cdot\vec\alpha-\vec 1^T\vec\alpha\\
+  &s.t.\quad 0\leq\alpha_t\leq C,i=1,2,\cdot,n\\
+  &s.t.\quad \vec y^T\vec\alpha=0
+\end{align}
+where QMatrix is a semi-positive definite matrix and acts as the quadratic programming`s central matrix
+which each element at $(i,j)$ is $$q_{ij}=y_{i} y_{j} K(\vec x_{i},\vec x_{j}),$$ where $K(\vec x_{i},\vec x_j)$ is
+a typical kernel function. C describes the soft margin`s tolerant distance and $\vec\alpha$ is the parameter vector of dual problem.\\
+A modern way to reduce the problem is discovered by Rong-En Fan s (2005)(ref3). Here we use its algorithm as algorithm 4:\\
+
+SMO method can update two parameter in each iteration and select a working set which can mostly enhance the gradient decent.
+Then, the MNIST dataset is a multi-classification problem. To use SVM on it, we build a one-vs-one C-SVC. For each two class,
+make a pair to buld a SVM classification model. Then for every input examples, work on all models and make a vote for the concrete
+output class.\\
+\quad SVM`s codes are implemented in C++ and saved in the SVM(git) folder.
+Also, we build a simple test demo (git) for SVM, and post the screenshot as figure 3.
+\begin{algorithm}[H]
+\caption{SMO for kernel SVM}
+\begin{algorithmic}[1]
+\REQUIRE $\vec y$, C, QMatrix
+\ENSURE optimized $\vec\alpha$
+\STATE set $\alpha=\alpha_1$ as the initialization, namely set the k in $\alpha_{k}$ is 1
+\IF{$\alpha_k$ is a stationary point of the problem}
+\STATE stop
+\ELSE
+\STATE{
+find a working set $B=\{i,j,\}$  by the following conditions:\\
+\begin{align}
+& i\in \arg\max_{t}\{-y_{t}\nabla f(\alpha^{k})_{t}|t\in I_{up}(\alpha^k)\}
+\centering
+\end{align}
+\begin{align}
+\begin{split}
+& j\in \arg\min_{t}\{-\frac{b_{ it}^{2}}{\vec\alpha_{it}}|t\in I_{low}(\alpha^k),\\
+& -y_{t}\nabla f(\alpha^k)_{t}<-y_{i}\nabla f(\alpha^k)_{i}\}
+\end{split}
+\end{align}
+}
+\STATE{
+where $$a_{ij}=q_{ii}+q_{jj}-2\times q_{ij}$$is as shown above,and
+\begin{align}
+& b_{ij}\equiv -y_{i}\nabla f(\alpha^k)_{i}+y_{j}\nabla f(\alpha^k)_{j}>0.\\
+& I_{up}(\alpha)\equiv \{t|\alpha_{t}<C,y_{t}=1||\alpha_{t}>0,y_{t}=-1\}.\\
+& I_{low}(\alpha)\equiv \{t|\alpha_{t}<C,y_{t}=-1||\alpha_{t}>0,y_{t}=1\}.
+\end{align}
+}
+\ENDIF
+\STATE{
+let $a_{ij}$ be defined as above, if $a_{ij} > 0$, solve the sub-problem below
+\begin{align}
+\begin{split}
+&\min_{\alpha_{\beta}}\quad\frac{1}{2}{
+\left[\begin{smallmatrix}
+Q_{BB} &Q_{BN}\\
+Q_{NB} &Q_{NN}
+\end{smallmatrix}\right]
+}{
+\left[
+\begin{smallmatrix}
+\alpha_{\beta}\\
+\alpha_{N}^{k}
+\end{smallmatrix}
+\right]
+}-{
+\left[
+\begin{smallmatrix}
+e_{B}^{T} e_{N}^{T}
+\end{smallmatrix}
+\right]
+}{
+\left[
+\begin{smallmatrix}
+&\alpha_{\beta}\\
+&\alpha_{N}^{k}
+\end{smallmatrix}
+\right]
+}\\
+&=\frac{1}{2}\alpha_{B}^{T}Q_{BB}\alpha_{B}+(-e_{B}+Q_{BN}\alpha_{N}^{k})^{T}+constant\\
+&=\frac{1}{2}{
+\left[
+\begin{smallmatrix}
+\alpha_i \alpha_j
+\end{smallmatrix}
+\right]
+\left[
+\begin{smallmatrix}
+Q_{ii}&Q_{ij}\\
+Q_{ji}&Q_{jj}
+\end{smallmatrix}
+\right]
+\left[
+\begin{smallmatrix}
+\alpha_i\\
+\alpha_j
+\end{smallmatrix}
+\right]
+}+(-e_B+Q_{BN}\alpha_N^k)^T{
+\left[
+\begin{smallmatrix}
+\alpha_i\\
+\alpha_j
+\end{smallmatrix}
+\right]
+}
+\end{split}
+\end{align}
+\begin{align}
+\begin{split}
+subject to\quad &0\leq\alpha_i,\alpha_j\leq C,\\
+&y_i\alpha_i+y_j\alpha_j=-y_N^T\alpha_N^k.
+\end{split}
+\end{align}
+where $
+\left[
+\begin{array}{ccc}
+Q_{BB}&Q_{BN}\\
+Q_{NB}&Q_{NN}
+\end{array}
+\right]$ is a permutation of the matrix $Q$.otherwise, solve this below:
+\begin{align}
+\begin{split}
+\min_{\alpha_i,\alpha_j}\;&\frac{1}{2}{
+\left[
+\begin{smallmatrix}
+\alpha_i \alpha_j
+\end{smallmatrix}
+\right]
+\left[
+\begin{smallmatrix}
+Q_{ii}&Q_{ij}\\
+Q_{ij}&Q_{jj}
+\end{smallmatrix}
+\right]
+\left[
+\begin{smallmatrix}
+\alpha_i\\
+\alpha_j
+\end{smallmatrix}
+\right]
+}+(-e_B+Q_{BN}\alpha_N^k)^T{
+\left[
+\begin{smallmatrix}
+\alpha_i\\
+\alpha_j
+\end{smallmatrix}
+\right]
+}\\
+&+\frac{\tau-\alpha_{ij}}{4}((\alpha_i-\alpha_i^k)^2+(\alpha_j-\alpha_j^k)^2)
+\end{split}
+\end{align}
+\begin{align}
+\begin{split}
+subject to\quad &0\leq \alpha_i,\alpha_j\leq C,\\
+&y_i\alpha_i+y_j\alpha_j=-y_N^T\alpha_N^k,
+\end{split}
+\end{align}
+}
+\STATE update $\alpha$ as the optimization in 8
+\end{algorithmic}
+\end{algorithm}
+
+\begin{figure}[h]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=\linewidth]{fig3.png}\\
+  \caption{a 2D SVM demo}\label{...}
+\end{figure}
+
+
+
+%------------------------------------------------
+
+\subsection{K-Nearest Neighbor(k-nn)}
+\quad\quad\emph{k-nn} algorithm is a concept of \emph{Pattern Recognition},it`s a non-parametric method used
+for classification and regression. In the feature space, the input consists of \emph{k} closet training samples. When \emph{k-nn} is used for classification, the output is a class membership, an object is
+classified by a majority vote of its neighbors, with the object being assigned to class most common among its \emph{k} nearest neighbors,and \emph{k} is a positive integer,typically small. When \emph{k} is 1,
+the object is simply assigned to the class of which single nearest neighbor.\\
+\quad In \emph{k-nn}, when we calculate the distance between the training sample
+and the input sample, we several ways, e.g, \emph{Euclidean Distance}, \emph{Manhattan Distance}
+,etc. Here I list the formula of the  2 kinds of distance metric.
+\begin{align}
+\centering
+&Eudiean(X,Y)=||X-Y||=\sqrt{\sum_{i=1}^n(x_i-y_i)^2}\\
+&Manhattan(X,Y)=|X-Y|=\sum_{i=1}^n|x_i-y_i|
+\end{align}
+where \emph{Manhattan Distance} is also called $L_1$ norm, \emph{Euclidean Distance}
+is called $L_2$ norm. In this work, we decided to use both the two kinds of distance metrics.
+Here I list the process of \emph{k-nn} on MNIST dataset as algorithm 5.
+\begin{algorithm}
+\caption{K-Nearest Neighbors}
+\begin{algorithmic}[1]
+\REQUIRE $D$, the set of the training samples,and $z$,the test sample,
+a vector of attribute values, $L$, the set of classes used to label the samples.
+\ENSURE $C_{z}\in L$, the class of $z$.
+\FOR{each sample $(x^t,y^t)\in D$}
+\STATE Compute $d(z,x^t)$, the distance is determined by what metric is used.
+\ENDFOR
+\STATE Sort the training samples by the distances increase.
+\STATE Select the first \emph{k} sorted samples
+\STATE Calculate the frequency of the \emph{k} samples` label
+\STATE return the label which has the highest frequency.
+\end{algorithmic}
+\end{algorithm}
+Obviously, different distance metrics and different k will have a great influence on the
+classification results.\\
+
+%------------------------------------------------
+
+\subsection{Convolutional Neural Network(CNN)}
+\quad In machine learning areas, a \textbf{convolutional neural network} is a deep ,feed-forward
+artificial neural networks, most commonly applied to visual imagery.\\
+%[\ref wikipedia $https://en.wikipedia.org/wiki/Convolutional_neural_network]\\
+\quad As a very famous and classical deep learning method with high efficence, CNNs
+classification on high dimensional samples works well compared with the traditional
+supervised learning algorithms. We use the extracted dataset to train our CNN model,
+which extracted the noise pixel and others that has no influence on the classification
+but will cost time.\\
+$\bm{Manage \, Input type}$ CNN consists of 3 kinds of layers, \emph{the input layer}, \emph{the hidden layer},\emph{the output layer}, and
+the hidden layer typically contains convolutional layers, pooling layers, fully connected layers and normalization layers.
+Different layers play different roles in the CNN model, their mixture let the classifier has higher
+accuracy.The dataset we use contains 50000 training samples, each sample is a $28*28$ figure, begin training,
+we flatten each sample into a $28*28$ array, and meanwhile, norm each pixel to $[0,1]$ to
+avoid the \textbf{Curse of Dimensionality} due to each pixel varies form 0 to 255, which may affect the
+classification result. Otherwise, we encode each label with $one-hot$ encoding for 10 classes,
+for example, label 1 is assigned to $[0,1,0,0,0,0,0,0,0,0]$.\\
+$\bm{Model \, Architecture}$\quad In our group`s CNN model, we use a model which is similar with the $LeNet5$ model.
+Our model consists of three convolutional layer, two pooling layer, one fully connected layer
+and a ouput layer. In CNN model, there are many parameters we can set, for example, the loss function,
+the optimizer,etc. In our work, we apply different optimizer and loss function to compare
+their accuracy and get the optimize parameter. Besides, we use \emph{\textbf{Batch Normalization(BN)}}
+technician to improve the accuracy and avoid the overfitting. And we add the dropout steps to avoid the overfitting too.\\
+$\bm{Optimizer}$ In our model, we apply three different optimizer, that is \emph{\textbf{Adagrad}},\emph{\textbf{Adadelta}}
+,\emph{\textbf{adam}}. Here I simply introduce three kinds of optimizer:\\
+$\bm{Adagrad}:$
+\begin{align}
+&n_t=n_{t-1}+g_t^2\\
+&\triangle\theta_t=-\frac{\eta}{\sqrt{n_t+\epsilon}}*g_t
+\end{align}
+here $g_t$ create a regulizer from 1 to t, and $\Delta\theta_t = -\frac{1}{\sum_{\tau=1}^t(g_t)^2+\epsilon}$,
+and $\epsilon$ is used to keep the denominator be 0. It suit to manage the sparse gradient.\\
+$\bm{Adadelta}:$  Adadelat is the extension of $\bm{Adagrad}$.\\
+
+adadelta can speed the training in the begining time.\\
+\begin{align}
+&n_t = v*n_t-1+(1-v)*g_t^2\\
+&\Delta\theta_t=-\frac{\eta}{\sqrt{n_t+\epsilon}}*g_t\\
+\end{align}
+with $\bm{newton \,iteration}$
+\begin{align}
+&E|g^2|_{t-1}+(1-\rho)*g_t^2\\
+&\Delta x_t=\frac{\sqrt{\sum_{r=1}^{t-1}\Delta x_r}}{\sqrt{E|g^2|_t+\epsilon}}
+\end{align}
+$\bm{Adam}$\\
+\begin{align}
+&m_t=\mu_{t-1}+(1-\mu)*g_t\\
+&n_t=v*n_{t-1}+(1-v)*g^2_t\\
+&\hat{m_t}=\frac{m_t}{1-\mu^t}\\
+&\hat{n_t}=-\frac{n_t}{1-v_t}\\
+&\Delta\theta_t=-\frac{\hat{m_t}}{\sqrt{\hat{n_t}}+\epsilon}*\eta
+\end{align}
+where $\hat{m_t},\hat{n_t}$ is the estimation of the gradient, and $$-\frac{\hat{m_t}}{\sqrt{\hat{n_t}}}$$is a dynamic constrain
+of the learning rate.\\
+$\bm{Loss \, Function}$\quad Our goal is to classify multi-class targets, so we adopt the $\bm{cross\, entropy}$ as the loss function
+for our CNN model after unnormalized log probabilities for each class.
+
+%----------------------------------------------------------------------------------------
+
+\section{Results}
+% experiment results
+In this section, we mainly state the experiment results and analysis the results.Consider the extracted dataset`s size is $28*28$, we need
+integrate the PCA with the KNN and SVM, so I organise this section with the order KNN, SVM, and the CNN.\\
+
+
+
+%------------------------------------------------
+\subsection{K-Nearest Neighbors}
+\quad In the experiment of $\bm{knn}$, we firstly use PCA to reduce the dimensions, and considering if $K$ is too big, the calculation may
+cost too much time, so we set the K be 10 in the beginning. The execution result is as below(with Euclidean Distance) ,
+\begin{table}[width=\linewidth]
+\caption{KNN Classification Results 1}
+{(K=10,test samples=10000)}
+\centering
+\begin{tabular}[!hbp]{|c|c|c|c|c|}
+\hline
+N & Accuracy &	ErrorRate &	Time \\
+\hline
+5	&69\%	&31\%	&01:31\\
+\hline
+10	&88.32\%	&11.68\%	&02:00\\
+\hline
+20	&94.39\%	&5.61\%	&03:11\\
+\hline
+30	&95.31\%	&4.69\%	&04:12\\
+\hline
+40	&95.42\%	&4.58\%	&05:39\\
+\hline
+50	&95.01\%	&4.99\%	&06:45\\
+\hline
+60	&94.72\%	&5.28\%	&07:13\\
+\hline
+70	&93.91\%	&6.09\%	&08:44\\
+\hline
+\end{tabular}
+
+\end{table}
+\begin{figure}[h]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=\linewidth]{knn_1.jpg}\\
+  \caption{KNN Classification Results 1}
+{(K=10,test samples=10000)}\label{knn:res:1}
+\end{figure}
+To view more intuitional, we draw a picture. From the table and the figure, we know if the \textbf{n\_components} parameter ranges in $[30,50]$,
+the accuracy is more than $95\%$, to find the best \textbf{n\_components}, we execute with different \textbf{n\_components} with step 2 in range $[30,50]$,
+the result is as listed below,
+\begin{table}[h]
+\caption{KNN Classification Results 2}
+{(K=10,test samples=10000)}
+\centering
+\begin{tabular}[!hbp]{|c|c|c|c|c|}
+\hline
+N & Accuracy &	ErrorRate &	Time \\
+\hline
+30	&94.38\%	&5.62\%	&04:19\\
+\hline
+32	&95.38\%	&4.62\%	&04:32\\
+\hline
+34	&95.51\%	&4.59\%	&04:38\\
+\hline
+36	&95.36\%	&4.64\%	&04:52\\
+\hline
+38	&95.35\%	&4.65\%	&05:00\\
+\hline
+40	&95.38\%	&4.62\%	&05:15\\
+\hline
+42	&95.31\%	&4.69\%	&05:30\\
+\hline
+44	&95.25\%	&4.75\%	&05:40\\
+\hline
+46	&95.29\%	&4.71\%	&06:37\\
+\hline
+48	&95.08\%	&4.92\%	&07:20\\
+\hline
+\end{tabular}
+\end{table}
+in the same, the figure is ,
+\begin{figure}[h]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=\linewidth]{knn_2.jpg}\\
+  \caption{KNN Classification Results 2}\label{knn:res:2}
+  {(K=10,test samples=10000)}
+\end{figure}
+Obviously, when we reduce the image vector to 34 dimensions, we get the best accuracy, so now we adopt 34 as the best reduced dimensions parameters.\\
+\quad Actually, the $k$ and the distance metrics affect the results too, now in the condition of $n\_components=34$, we change k and distance metrics,
+the results is shown as table 3.
+\begin{table}[h]
+\caption{KNN Classification Results 3}
+{(N=34,test samples=10000)}
+\centering
+\begin{tabular}[!hbp]{|c|c|c|c|c|}
+\hline
+K	&Accuracy(Euclidean)	&Accuracy(Manhattan)\\
+\hline
+1	&96.74\%	&96.5\%\\
+\hline
+2	&95.81\%	&95.35\%\\
+\hline
+3	&95.65\%	&96.29\%\\
+\hline
+4	&96.39\%	&96.21\%\\
+\hline
+5	&96.44\%	&96.06\%\\
+\hline
+7	&96\%	&95.7\%\\
+\hline
+9	&95.87\%	&95.76\%\\
+\hline
+11	&95.68\%	&95.45\%\\
+\hline
+13	&95.35\%	&95.23\%\\
+\hline
+15	&95.32\%	&95.02\%\\
+\hline
+17	&95.16\%	&94.88\%\\
+\hline
+19	&94.97\%	&94.67\%\\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+From the results we know that when $k=1,N=34$ with $Euclidean\,Distance$
+metric, we get a better accuracy on MNIST dataset. Maybe $k=1$ is strange in KNN,
+I think it is because that we use PCA in the beginning, and extracted the 
+principal components, then the most similar sample has the sample label compared
+with the input sample in high probability.
+
+%------------------------------------------------K
+\subsection{Multi-class Support Vector Machine}
+When implementing the SVM algorithm, we use the $Eigen$ library in $c++$, and use rbf kernel as the kernel function, use grid search method to
+find the optimal parameter C and $\gamma$,
+\begin{figure}
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=\linewidth]{svm_res.png}\\
+  \caption{SVM Grid Search Results}%\label{}
+\end{figure}
+In the depth graph, we find that the best accuracy is 99.21\%, a good accuracy
+but training SVM costs too much time due to the high dimensions. 
+
+\subsection{Convolutional Neural Network}
+Firstly, we use two convolutional layers, one pooling layer without any batch normalization to build the model,and we set the the optimizer
+adam, adadelta, and adagrad, their accuracy are 98.89\%,98.67\%,98.48\% respectively. The three kinds of optimizer`s classification accuracy vary
+not too much, and adam is better. Although the accuracy is near 99\%, we still think it`s not good. Therefore we add external one convolutional layer and one
+pooling layer, and add batch normalization to avoid the over-fitting, and after each Conv layer, we drop 0.25\% data to reduce the dimesnions. 
+Here is the results,
+\begin{table}[h]
+\caption{CNN Classification Results}
+\centering
+\begin{tabular}[!hbp]{|c|c|c|c|c|}
+\hline
+Hidden Layers	&optimizer	&accuracy\\
+\hline
+3	&adam	&98.89\%\\
+\hline
+3	&Adadelat	&98.67\%\\
+\hline
+3	&adagrad	&98.5\%\\
+\hline
+5	&adam	&99.29\%\\
+\hline
+5	&Adadelat	&99.36\%\\
+\hline
+5	&adagrad	&99.21\%\\
+\hline
+\end{tabular}
+\end{table}
+After several adjustment on our model, we find that when use adam optimizer
+as well as 3 convolutional layers and two pooling layers followed by $Batch Normalization$, we get the best accuracy
+$99.36\%$.
+
+\subsection{Comparison}
+\quad In our work, we applied three kinds of algorithms to classify the MNIST dataset, each has its own characteristics.
+KNN is fast than SVM, but its accuracy is not. SVM is actually a deep fully connected neural network in some aspects. CNN 
+contains the correlation of the nearest pixels in a figure, that is why CNN performances well in image recognization. When we 
+want adopt one model to classify a figure in real life, I think the SVM or CNN is better after training due to their high efficiency. 
+
+
+%----------------------------------------------------------------------------------------
+\section{Conclusion}
+Machine Learning is a very attractive subject, sometimes it is quite interesting and
+sometimes boring. In the process of classifying the MNIST dataset, we implement the algorithms by our own. When we began this report, we have
+not so much knowledge of machine learning, we study those method by ourselves and benefit a lot in the process. By doing these experiments, we 
+learn to adjust the model to let it performance better, we are more familiar with those algorithms. 
+\section{reference}
+
+[1] IEEE Transactions on Systems, Man, and Cybernetics (Volume: 9, Issue: 1, Jan. 1979 )\\
+\begin{CJK*}{GBK}{song}
+[2] 《计算机辅助设计与图形学学报》2004年 第10期 | 王冰 职秦川 张仲选 耿国华 周明全   西北大学计算机科学系 西安 710069\\
+\end{CJK*}
+[3] The Journal of Machine Learning Research; Volume 6, $12/1/2005$; Pages 1889-1918
+
+%------------------------------------------------KNN and CNN
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\printbibliography[title={Bibliography}] % Print the bibliography, section title in curly brackets
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
