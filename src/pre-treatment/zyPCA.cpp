@@ -1,4 +1,4 @@
-ï»¿// Writer: èµµè€€
+// Writer: ÕÔÒ«
 
 #include <iostream>		// for std::cout
 #include <cstdlib>		// for std::system
@@ -9,22 +9,22 @@
 //#include <Eigen/Sparse>
 
 constexpr uint32_t figures = 60000;
-constexpr uint32_t figure_size = 45;
+constexpr uint32_t figure_size = 28;
 constexpr uint32_t total_size = figures * figure_size * figure_size;
 constexpr uint32_t single_size = figure_size * figure_size;
 
 using RawPixel = uint8_t;
 using RawFigure = std::basic_string<RawPixel>;
-using Pixel = double;	// åŸ uint8_t ä¼šå‘ç”Ÿä¸‹é™æº¢å‡ºï¼Œéœ€è¦æ‰©å±•åˆ°è´Ÿæ•°ï¼Œå¹¶ä¸”é‰´äºç²¾åº¦çš„è€ƒè™‘ï¼Œä½¿ç”¨ double
-						// å¦‚æœä½¿ç”¨ Eigen::Matrix<Pixel, -1, single_size, RowMajor>  å¯¼è‡´é™æ€å†…å­˜åˆ†é…å¤ªå¤§ï¼ŒæŠ¥é”™
-						// å¿…é¡»ä½¿ç”¨ RowMajorï¼Œå› ä¸ºåœ¨å‡½æ•° castToDataSet ä¸­ç›´æ¥å¯¹å†…å­˜å—è¿›è¡Œäº†å¤åˆ¶æ“ä½œ
+using Pixel = double;	// Ô­ uint8_t »á·¢ÉúÏÂÏŞÒç³ö£¬ĞèÒªÀ©Õ¹µ½¸ºÊı£¬²¢ÇÒ¼øÓÚ¾«¶ÈµÄ¿¼ÂÇ£¬Ê¹ÓÃ double
+						// Èç¹ûÊ¹ÓÃ Eigen::Matrix<Pixel, -1, single_size, RowMajor>  µ¼ÖÂ¾²Ì¬ÄÚ´æ·ÖÅäÌ«´ó£¬±¨´í
+						// ±ØĞëÊ¹ÓÃ RowMajor£¬ÒòÎªÔÚº¯Êı castToDataSet ÖĞÖ±½Ó¶ÔÄÚ´æ¿é½øĞĞÁË¸´ÖÆ²Ù×÷
 using FigureSet = Eigen::Matrix<Pixel, -1, -1>;
 
 RawFigure readData(std::size_t number)
 {
-	std::fstream fin("mnist_train_data", std::ios::in | std::ios::binary);
-	// ä¸åŠ æ­¤è¡Œè¯»ä¸äº† 0x0Dï¼Œå› ä¸º 0x0D æ˜¯æ¢è¡Œç¬¦ï¼Œä¼šè¢«å½“åšç©ºç™½å­—ç¬¦çœç•¥æ‰ã€‚
-	// å¥‡æ€ªæ˜æ˜åŠ äº† std::ios::binary è¿˜æ˜¯è¿™æ ·ã€‚
+	std::fstream fin("mnist_train_data_extracted", std::ios::in | std::ios::binary);
+	// ²»¼Ó´ËĞĞ¶Á²»ÁË 0x0D£¬ÒòÎª 0x0D ÊÇ»»ĞĞ·û£¬»á±»µ±×ö¿Õ°××Ö·ûÊ¡ÂÔµô¡£
+	// Ææ¹ÖÃ÷Ã÷¼ÓÁË std::ios::binary »¹ÊÇÕâÑù¡£
 	fin.unsetf(std::ios::skipws);
 	RawFigure set;
 	for (int i = 0; i < number; ++i)
@@ -39,7 +39,7 @@ RawFigure readData(std::size_t number)
 	return set;
 }
 
-// å¯¹äºå¾ˆå°‘ä½¿ç”¨çš„å‡½æ•°ï¼Œå¯ä»¥ä½¿ç”¨æ¨¡æ¿å‡½æ•°ï¼Œä»è€Œå¦‚æœä¸è°ƒç”¨è¯¥å‡½æ•°ï¼Œå°±ä¸ä¼šå¢åŠ ä»£ç æ®µå¤§å°ã€‚
+// ¶ÔÓÚºÜÉÙÊ¹ÓÃµÄº¯Êı£¬¿ÉÒÔÊ¹ÓÃÄ£°åº¯Êı£¬´Ó¶øÈç¹û²»µ÷ÓÃ¸Ãº¯Êı£¬¾Í²»»áÔö¼Ó´úÂë¶Î´óĞ¡¡£
 template<int index>
 void printRawFigure(const RawFigure & data)
 {
@@ -56,14 +56,14 @@ void printRawFigure(const RawFigure & data)
 	std::cout << std::dec;
 }
 
-// inline æé«˜æ•ˆç‡
+// inline Ìá¸ßĞ§ÂÊ
 inline FigureSet castToDataSet(const RawFigure & raw_set)
 {
-	// å°†è¯»å–çš„æ•°æ®è¾“å…¥åˆ° Eigen çš„çŸ©é˜µï¼Œå¹¶å°†å„ä¸ªåƒç´ è½¬æˆ double ä»¥æé«˜ç²¾åº¦ã€‚
+	// ½«¶ÁÈ¡µÄÊı¾İÊäÈëµ½ Eigen µÄ¾ØÕó£¬²¢½«¸÷¸öÏñËØ×ª³É double ÒÔÌá¸ß¾«¶È¡£
 	return Eigen::Map<Eigen::Matrix<RawPixel, -1, -1, Eigen::RowMajor>>(const_cast<RawPixel *>(raw_set.data()), raw_set.size() / single_size, single_size).cast<double>().adjoint();
 }
 
-// å¯¹äºå¾ˆå°‘ä½¿ç”¨çš„å‡½æ•°ï¼Œå¯ä»¥ä½¿ç”¨æ¨¡æ¿å‡½æ•°ï¼Œä»è€Œå¦‚æœä¸è°ƒç”¨è¯¥å‡½æ•°ï¼Œå°±ä¸ä¼šå¢åŠ ä»£ç æ®µå¤§å°ã€‚
+// ¶ÔÓÚºÜÉÙÊ¹ÓÃµÄº¯Êı£¬¿ÉÒÔÊ¹ÓÃÄ£°åº¯Êı£¬´Ó¶øÈç¹û²»µ÷ÓÃ¸Ãº¯Êı£¬¾Í²»»áÔö¼Ó´úÂë¶Î´óĞ¡¡£
 template<int index>
 void printFigure(const FigureSet & set)
 {
@@ -80,31 +80,31 @@ void printFigure(const FigureSet & set)
 
 void featureNormalize(FigureSet & data)
 {
-	//æ ·æœ¬å‡å€¼åŒ–ä¸º0  
+	//Ñù±¾¾ùÖµ»¯Îª0  
 	data.colwise() -= data.rowwise().mean();
 }
 
 Eigen::MatrixXd computeCov(const FigureSet & data)
 {
-	// è®¡ç®—åæ–¹å·®çŸ©é˜µC = X X^T / (n-1); 
-	// adjoint æ±‚å–å…±è½­è½¬ç½®ï¼Œtranspose æ±‚å–å®è½¬ç½®ï¼Œæ­¤å¤„åªéœ€è¦ç”¨å®è½¬ç½®å³å¯
+	// ¼ÆËãĞ­·½²î¾ØÕóC = X X^T / (n-1); 
+	// adjoint ÇóÈ¡¹²éî×ªÖÃ£¬transpose ÇóÈ¡Êµ×ªÖÃ£¬´Ë´¦Ö»ĞèÒªÓÃÊµ×ªÖÃ¼´¿É
 	return (data * data.transpose()).array() / (data.cols() - 1);
 }
 
 decltype(auto) computeSvd(const FigureSet & data)
 {
-	// è®¡ç®—å¥‡å¼‚å€¼åˆ†è§£
+	// ¼ÆËãÆæÒìÖµ·Ö½â
 	// X = U D V^T
-	// æ‰€ä»¥è¦è·å–å¥‡å¼‚å€¼åˆ†è§£åçš„
+	// ËùÒÔÒª»ñÈ¡ÆæÒìÖµ·Ö½âºóµÄ
 	Eigen::BDCSVD<FigureSet> svd(data, Eigen::DecompositionOptions::ComputeFullU);
 	return std::make_pair(svd.singularValues(), svd.matrixU());
 }
 
-// è®¡ç®—ç‰¹å¾å€¼å’Œç‰¹å¾å‘é‡ã€‚è¿”å›å€¼è®¾ä¸º decltype(auto) ä»è€Œå®ç°å¤šé‡è¿”å›å€¼
+// ¼ÆËãÌØÕ÷ÖµºÍÌØÕ÷ÏòÁ¿¡£·µ»ØÖµÉèÎª decltype(auto) ´Ó¶øÊµÏÖ¶àÖØ·µ»ØÖµ
 decltype(auto) computeEig(const Eigen::MatrixXd & cov_mat)
 {
-	// è®¡ç®—ç‰¹å¾å€¼å’Œç‰¹å¾å‘é‡ï¼Œç”±äºåæ–¹å·®çŸ©é˜µæ˜¯å®å¯¹ç§°çŸ©é˜µï¼Œæ‰€ä»¥å¯ä»¥ä½¿ç”¨ selfadjoint æŒ‰ç…§å¯¹ç§°çŸ©é˜µçš„ç®—æ³•å»è®¡ç®—
-	// Eigen ä¸­è®¡ç®—å¾—åˆ°çš„ç‰¹å¾å€¼ï¼Œå¯ä»¥è®©äº§ç”Ÿçš„ vec å’Œ val æŒ‰ç…§ä»£æ•°é‡æ•°å‡åºæ’åˆ—  
+	// ¼ÆËãÌØÕ÷ÖµºÍÌØÕ÷ÏòÁ¿£¬ÓÉÓÚĞ­·½²î¾ØÕóÊÇÊµ¶Ô³Æ¾ØÕó£¬ËùÒÔ¿ÉÒÔÊ¹ÓÃ selfadjoint °´ÕÕ¶Ô³Æ¾ØÕóµÄËã·¨È¥¼ÆËã
+	// Eigen ÖĞ¼ÆËãµÃµ½µÄÌØÕ÷Öµ£¬¿ÉÒÔÈÃ²úÉúµÄ vec ºÍ val °´ÕÕ´úÊıÖØÊıÉıĞòÅÅÁĞ  
 	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov_mat);
 	return std::make_pair(eig.eigenvalues(), eig.eigenvectors());
 }
@@ -113,7 +113,7 @@ std::size_t computeDim(const Eigen::MatrixXd & eigen_values, double ratio = 0.95
 {
 	Pixel sum = 0;
 	auto total_sum = eigen_values.sum();
-	// è®¡ç®—ååºå’Œã€‚ç”±äºæ˜¯ä¸€ä¸ªä¸€ä¸ªç´¯åŠ è¿‡å»çš„ï¼Œæ‰€ä»¥ä¸éœ€è¦ä½¿ç”¨æ ‘çŠ¶æ•°ç»„ã€‚
+	// ¼ÆËãºóĞòºÍ¡£ÓÉÓÚÊÇÒ»¸öÒ»¸öÀÛ¼Ó¹ıÈ¥µÄ£¬ËùÒÔ²»ĞèÒªÊ¹ÓÃÊ÷×´Êı×é¡£
 	for (auto i = eigen_values.rows() - 1; i >= 0; --i)
 	{
 		sum += eigen_values(i, 0);
@@ -128,25 +128,31 @@ std::size_t computeDim2(const Eigen::MatrixXd & svd_values, double ratio = 0.95)
 	return computeDim((svd_values.array() * svd_values.array()).reverse(), ratio);
 }
 
-int main()
+int pca_main()
 {
-	// è¯»å–å…¨éƒ¨æ•°å­—å›¾åƒ
+	// ¶ÁÈ¡È«²¿Êı×ÖÍ¼Ïñ
 	auto raw_figures = readData(60000);
-	// è½¬æ¢ä¸º Eigen æ•°æ®ç»“æ„
+	// ×ª»»Îª Eigen Êı¾İ½á¹¹
 	auto figures = castToDataSet(raw_figures);
-	// å°è¯•æ‰“å°ä¸€å¼ å›¾ç‰‡
+	// ³¢ÊÔ´òÓ¡Ò»ÕÅÍ¼Æ¬
 	printFigure<24>(figures);
 	std::cout << '\n';
-	// å½’ä¸­å¿ƒåŒ–
+	// ¹éÖĞĞÄ»¯
 	std::cout << "reach here" << std::endl;
 	featureNormalize(figures);
-	//// è¯•æ‰“å°å½’ä¸­å¿ƒåŒ–åä¸Šè¿°å›¾ç‰‡
+	//// ÊÔ´òÓ¡¹éÖĞĞÄ»¯ºóÉÏÊöÍ¼Æ¬
 	//printFigure<24>(figures);
 	//std::cout << '\n';
-	auto[svd_values, svd_vectors] = computeSvd(figures);
-	// è®¡ç®—åˆé€‚çš„é»˜è®¤ä¸º 95% æŸå¤±çš„ä¿ç•™ç»´åº¦ä¸ªæ•°
+	//std::cout << "reach here" << std::endl;
+	//auto[eigen_values, eigen_vectors] = computeEig(computeCov(figures));
+	//std::cout << "reach here" << std::endl;
+	//auto n_dim = computeDim(eigen_values);
+	// SVD
 	std::cout << "reach here" << std::endl;
-	std::cout << svd_values.bottomRows(100) << std::endl;
+	auto[svd_values, svd_vectors] = computeSvd(figures);
+	// ¼ÆËãºÏÊÊµÄÄ¬ÈÏÎª 95% ËğÊ§µÄ±£ÁôÎ¬¶È¸öÊı
+	std::cout << "reach here" << std::endl;
+	// std::cout << svd_values.bottomRows(100) << std::endl;
 	 auto n_dim = computeDim2(svd_values);
 #if 0
 	for (int i = 0; i < figure_size; ++i)
@@ -159,7 +165,7 @@ int main()
 		std::cout << '\n';
 	}
 #endif
-	// æŸ¥çœ‹å®é™…ç•™å­˜çš„ç»´åº¦ä¸ªæ•°
+	// ²é¿´Êµ¼ÊÁô´æµÄÎ¬¶È¸öÊı
 	std::cout << n_dim << std::endl;
 	//Eigen::MatrixXd res = figures * eigen_vectors.rightCols(n_dim);
 	//std::cout << "the result is " << res.rows() << "x" << res.cols() << " after pca algorithm." << std::endl;
